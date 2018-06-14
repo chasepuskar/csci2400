@@ -303,10 +303,20 @@ int conditional(int x, int y, int z) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  /* positive complement */
-  int positive = x+((x>>31)&(~x+~x+1));
-  
-  return 2;
+  /*finds positive complement, then systematically checks half of bits and shifts if there are any present there, sums total at end*/
+      int pos = x+((x>>31)&(~x+~x+1));
+    int mask0 = (!!((~((0xff<<8)+(0xff)))&pos))<<4;
+    pos = pos>>mask0;
+    int mask1 = (!!((0xff<<8)&pos))<<3;
+    pos = pos>>mask1;
+    int mask2 = (!!((0xf<<4)&pos))<<2;
+    pos = pos>>mask2;
+    int mask3 = (!!(0xC&pos))<<1;
+    pos = pos>>mask3;
+    int mask4 = (!!(0x3&pos));
+    pos = pos>>mask4;
+    int mask5 = (!!(0x1&pos));
+  return mask0 + mask1 + mask2 + mask3 + mask4 + mask5 + 1;;
 }
 /* 
  * isNonZero - Check whether x is nonzero using
