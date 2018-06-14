@@ -1,7 +1,7 @@
 /* 
  * CS:APP Data Lab 
  * 
- * <Please put your name and userid here>
+ * Charles Puskar 106150665
  * 
  * bits.c - Source file with your solutions to the Lab.
  *          This is the file you will hand in to your instructor.
@@ -276,7 +276,8 @@ int fitsBits(int x, int n) {
  *   Rating: 3
  */
 int subOK(int x, int y) {
-  return 2;
+  /* sub not okay if signs are different and x changes sign */
+  return !(((((x + (1+ (~y)))^x)>>31)&(((x^y)>>31)))&1);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -302,6 +303,9 @@ int conditional(int x, int y, int z) {
  *  Rating: 4
  */
 int howManyBits(int x) {
+  /* positive complement */
+  int positive = x+((x>>31)&(~x+~x+1));
+  
   return 2;
 }
 /* 
