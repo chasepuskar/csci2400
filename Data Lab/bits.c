@@ -304,18 +304,19 @@ int conditional(int x, int y, int z) {
  */
 int howManyBits(int x) {
   /*finds positive complement, then systematically checks half of bits and shifts if there are any present there, sums total at end*/
-      int pos = x+((x>>31)&(~x+~x+1));
-    int mask0 = (!!((~((0xff<<8)+(0xff)))&pos))<<4;
+    int pos,mask0,mask1,mask2,mask3,mask4,mask5;
+    pos = x+((x>>31)&(~x+~x+1));
+    mask0 = (!!((~((0xff<<8)+(0xff)))&pos))<<4;
     pos = pos>>mask0;
-    int mask1 = (!!((0xff<<8)&pos))<<3;
+    mask1 = (!!((0xff<<8)&pos))<<3;
     pos = pos>>mask1;
-    int mask2 = (!!((0xf<<4)&pos))<<2;
+    mask2 = (!!((0xf<<4)&pos))<<2;
     pos = pos>>mask2;
-    int mask3 = (!!(0xC&pos))<<1;
+    mask3 = (!!(0xC&pos))<<1;
     pos = pos>>mask3;
-    int mask4 = (!!(0x3&pos));
+    mask4 = (!!(0x3&pos));
     pos = pos>>mask4;
-    int mask5 = (!!(0x1&pos));
+    mask5 = (!!(0x1&pos));
   return mask0 + mask1 + mask2 + mask3 + mask4 + mask5 + 1;;
 }
 /* 
