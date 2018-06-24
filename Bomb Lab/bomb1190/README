@@ -1,3 +1,15 @@
 This is bomb 1190.
 
 It belongs to chpu4633 (chpu4633@colorado.edu)
+
+PHASE 1: Writes the string "The earth is everything I've ever known" to %esi, then runs strings_not_equal, which reads a string and then returns 1 if it is equal to %esi
+
+PHASE 2: Reads six numbers, checks that the first number is 1, and then loops through the numbers checking that each number it double the previous
+
+PHASE 3: Reads two numbers, checks that there are more than one number, checks that the first number is less than or equal to 7, jumps to part of the code based off of the first number, which sets %eax to a corresponding value, then checks if the second number is equal to the value set for %eax
+
+PHASE 4: Reads two numbers, checks that there are exactly two numbers, sets %eax as the second number, subtracts 2, checks that the result is less than or equal to 3, then calls func4, which does things that set eax, and then checks if eax is equal to the first number
+
+PHASE 5: Reads three numbers, checks that there are more than number numbers, runs a loop 10 times that adds to a value based off of the first number and overflows it, then checks that the the second value is equal to the resulting overflowed value at the end, and that the third number is equal to the sum of the overflowed value at each step of the loop
+
+PHASE 6: First goes through loop checking numbers are less than or equal to six and none of the numbers are equal to each other
