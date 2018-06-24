@@ -12,4 +12,4 @@ PHASE 4: Reads two numbers, checks that there are exactly two numbers, sets %eax
 
 PHASE 5: Reads three numbers, checks that there are more than number numbers, runs a loop 10 times that adds to a value based off of the first number and overflows it, then checks that the the second value is equal to the resulting overflowed value at the end, and that the third number is equal to the sum of the overflowed value at each step of the loop
 
-PHASE 6: First goes through loop checking numbers are less than or equal to six and none of the numbers are equal to each other
+PHASE 6: First goes through loop checking numbers are less than or equal to six and none of the numbers are equal to each other, then references numbers against iterations of nodes to check the correct order based on descending memory
