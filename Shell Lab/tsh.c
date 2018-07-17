@@ -2,6 +2,7 @@
  * tsh - A tiny shell program with job control
  *
  * Liam Sheffer; lish7884
+ * Charles Puskar; chpu4633
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -203,7 +204,7 @@ void eval(char *cmdline)
             setpgid(Cpid, Cpid);
             if(execve(argv[0], argv, environ) < 0){ //Ensure program is valid
                 printf("%s: Command Not Found\n", argv[0]);
-                _exit(0);
+                return;
             }
         }
         addjob(jobs, pid, FG + (bg == 1), cmdline);
@@ -359,25 +360,31 @@ void do_killall(char **argv)
  */
 void do_bgfg(char **argv)
 {
+	if(argv[1]==NULL){
+		printf("%s command requires PID or Jjobid argument\n",argv[0]);
+		return;
+	}
+	char *jobid = argv[1];
+	if(!isdigit(*jobid) && jobid[0] != 'J'){
+		printf("%s: argument must be a PID or Jjobid\n",argv[0]);
+		return;
+	}
     if(!strcmp(argv[0],"bg")){ //if 'bg' command
-        char jobid = "D";
-        printf("0: %s\n", *jobid);
-        if(strcmp(jobid,"J1")>0){ //if user gives job id
-            printf("1: %s", argv[1]);
-            char **temp = 0;
+        if(jobid[0]=='J'){ //if user gives job id
+        	jobid++;
+        	char **temp = 0;
             int bgjob = strtol(jobid,temp,10);
-            printf("2: %d\n",bgjob);
             int i;
             for(i = 0; i < MAXJOBS; i++){
                 if(jobs[i].jid == bgjob){
                     jobs[i].state = BG;
-                    kill(jobs[i].pid, SIGCONT);
-                    printf("[%d] (%d) %s\n",jobs[i].jid, jobs[i].pid, jobs[i].cmdline);
+                    pid_t pid = getpgid(jobs[i].pid);
+                    killpg(pid, SIGCONT);
+                    printf("[%d] (%d) %s",jobs[i].jid, jobs[i].pid, jobs[i].cmdline);
+                    return;
                 }
-                return;
             }
             printf("%s: No such job\n",argv[1]); //prints if no matching job found
-
         }else{ //if user gives process id
             char **temp = 0;
             int bgjob = strtol(argv[1],temp,10);
@@ -392,7 +399,37 @@ void do_bgfg(char **argv)
             printf("(%s): No such process\n",argv[1]);
         }
     }else{ //if 'fg' command
-
+        if(jobid[0]=='J'){ //if user gives job id
+        	jobid++;
+        	char **temp = 0;
+            int fgjob = strtol(jobid,temp,10);
+            int i;
+            for(i = 0; i < MAXJOBS; i++){
+                if(jobs[i].jid == fgjob){
+                    jobs[i].state = FG;
+                    pid_t pid = getpgid(jobs[i].pid);
+                    killpg(pid, SIGCONT);
+                    waitfg(pid);
+                    return;
+                }
+            }
+            printf("%s: No such job\n",argv[1]); //prints if no matching job found
+        }else{ //if user gives process id
+            char **temp = 0;
+            int fgjob = strtol(argv[1],temp,10);
+            int i;
+            for(i = 0; i < MAXJOBS; i++){
+                if(jobs[i].pid == fgjob){
+                	pid_t pid = jobs[i].pid;
+                	//int stat = 0;
+                    jobs[i].state = FG;
+                    kill(jobs[i].pid, SIGCONT);
+                    waitfg(pid);
+                    return;
+                }
+            }
+            printf("(%s): No such process\n",argv[1]);
+        }
     }
 
     return;
@@ -403,6 +440,14 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+	int stat = 0;
+	if(waitpid(pid, &stat, WUNTRACED) < 0){
+        printf("waitpid error: %s\n", strerror(errno));
+        return;
+    }
+    if(WIFEXITED(stat)){
+        removejob(jobs, pid);
+    }
     return;
 }
 
@@ -475,7 +520,8 @@ void sigtstp_handler(int sig)
             pid_t group = getpgid(pid);
             killpg(group, SIGTSTP);
             jobs[i].state = ST;
-            printf("Job [%d] (%d) stopped by signal %d\n", nextjid, pid, SIGTSTP);
+            int jid = jobs[i].jid;
+            printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, SIGTSTP);
             return;
         }
     }
