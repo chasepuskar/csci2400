@@ -1,7 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
  * 
- * <Put your name and login ID here>
+ * Charles Puskar chpu4633
  */
 #include <stdio.h>
 #include <stdlib.h>
