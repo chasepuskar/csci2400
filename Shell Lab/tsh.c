@@ -181,6 +181,10 @@ int main(int argc, char **argv)
 void eval(char *cmdline)
 {
     char *argv[MAXLINE];
+    sigset_t oldmask, newmask;
+    sigemptyset(&oldmask);
+    sigemptyset(&newmask);
+    sigaddset(&newmask,SIGCHLD);
 
     int bg = parseline(cmdline, argv);
     pid_t pid;
@@ -195,6 +199,7 @@ void eval(char *cmdline)
 
     if(!is_builtin_cmd(argv)){
         nextjid = maxjid(jobs)+1;
+        sigprocmask(SIG_BLOCK,&newmask,&oldmask);
         if((pid = fork()) < 0){ //Check for fork error
             printf("fork error: %s\n", strerror(errno));
             return;
@@ -202,21 +207,16 @@ void eval(char *cmdline)
         if(pid == 0){ //Child runs program
             pid_t Cpid = getpid();
             setpgid(Cpid, Cpid);
+            sigprocmask(SIG_UNBLOCK,&newmask,&oldmask);
             if(execve(argv[0], argv, environ) < 0){ //Ensure program is valid
                 printf("%s: Command Not Found\n", argv[0]);
-                return;
+                _exit(0);
             }
         }
         addjob(jobs, pid, FG + (bg == 1), cmdline);
+        sigprocmask(SIG_UNBLOCK,&newmask,&oldmask);
         if(!bg){ //only parent executes this, wait if foreground job
-            int stat = 0;
-            if(waitpid(pid, &stat, WUNTRACED) < 0){
-                printf("waitpid error: %s\n", strerror(errno));
-                return;
-            }
-            if(WIFEXITED(stat)){
-                removejob(jobs, pid);
-            }
+            waitfg(pid);
         }else{
             printf("[%d] (%d) %s",get_jid_from_pid(pid),pid, cmdline);
         }
@@ -440,13 +440,14 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-	int stat = 0;
-	if(waitpid(pid, &stat, WUNTRACED) < 0){
-        printf("waitpid error: %s\n", strerror(errno));
-        return;
+	int i;
+    for(i = 0; i < MAXJOBS; i++){
+        if(jobs[i].pid==pid){
+            break;
+        }
     }
-    if(WIFEXITED(stat)){
-        removejob(jobs, pid);
+    while(jobs[i].state==FG){
+    	sleep(0.01);
     }
     return;
 }
@@ -464,6 +465,31 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
+	int status = 0;
+	pid_t pid;
+	if((pid = waitpid(-1,&status,WNOHANG|WUNTRACED)) < 0){
+		printf("waitpid error: %s\n",strerror(errno));
+		_exit(0);
+	}
+	if(WIFSIGNALED(status)){
+		int signal = WTERMSIG(status);
+		printf("Job [%d] (%d) terminated by signal %d\n",get_jid_from_pid(pid),pid,signal);
+		removejob(jobs,pid);
+	}
+	if(WIFSTOPPED(status)){
+		int signal = WSTOPSIG(status);
+		printf("Job [%d] (%d) stopped by signal %d\n",get_jid_from_pid(pid),pid,signal);
+		int i;
+		for(i = 0; i < MAXJOBS; i++){
+        	if(jobs[i].pid==pid){
+            	jobs[i].state = ST;
+            	break;
+        	}
+        }
+	}
+	if(WIFEXITED(status)){
+		removejob(jobs,pid);
+	}
     return;
 }
 
@@ -478,8 +504,6 @@ void sigalrm_handler(int sig)
     for(i = 0; i < MAXJOBS; i++){
         if(jobs[i].pid){
             kill(jobs[i].pid,SIGINT);
-            removejob(jobs, jobs[i].pid);
-            printf("Job [%d] (%d) terminated by signal %d\n",jobs[i].jid, jobs[i].pid, SIGINT);
         }
     }
 
@@ -499,8 +523,6 @@ void sigint_handler(int sig)
             pid_t pid = jobs[i].pid;
             pid_t group = getpgid(pid);
             killpg(group, SIGINT);
-            removejob(jobs, jobs[i].pid);
-            printf("Job [%d] (%d) terminated by signal %d\n", nextjid, pid, SIGINT);
         }
     }
     return;
@@ -520,8 +542,6 @@ void sigtstp_handler(int sig)
             pid_t group = getpgid(pid);
             killpg(group, SIGTSTP);
             jobs[i].state = ST;
-            int jid = jobs[i].jid;
-            printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, SIGTSTP);
             return;
         }
     }
