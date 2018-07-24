@@ -349,6 +349,15 @@ void do_ignore_singleton(void)
 
 void do_killall(char **argv)
 {
+    if(argv[1] == NULL){
+        printf("killall command requires a killall timeout\n");
+        return;
+    }
+    char *timer = argv[1];
+    if(!isdigit(*timer)){
+        printf("%s is not an integer killall timeout\n", argv[1]);
+        return;
+    }
     char **temp = 0;
     int time = strtol(argv[1], temp, 10);
     alarm(time);
@@ -503,10 +512,11 @@ void sigalrm_handler(int sig)
     int i;
     for(i = 0; i < MAXJOBS; i++){
         if(jobs[i].pid){
-            kill(jobs[i].pid,SIGINT);
+            pid_t group = getpgid(jobs[i].pid);
+            killpg(group,SIGINT);
         }
     }
-
+    
     return;
 }
 
